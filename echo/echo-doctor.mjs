@@ -39,14 +39,14 @@ const RUNTIME = process.env.ECHO_RUNTIME || path.join(HUB, "runtime");
 
 const MARK = "⛬ 压缩索引（非原文）";
 const MAGIC = Buffer.from([0x28, 0xb5, 0x2f, 0xfd]);
-// ★ 版本无感：认 session.v<N>.jsonl.zstd，不认死 v3（2026-10-08 的故障根因）。
+// ★ 版本无感：认 session.v<N>.jsonl.zstd，不认死 v3（当初的故障根因）。
 const LOG_RE = /^session\.v(\d+)\.jsonl\.zstd$/;
 
 // ──────────────────────────── 工具 ────────────────────────────
 
 const readText = (p) => { try { return fs.readFileSync(p, "utf8") } catch { return null } };
 const statSafe = (p) => { try { return fs.statSync(p) } catch { return null } };
-// ★ 2026-10-09 修：原来这里是 `new Date(d).toISOString()` —— 而 **toISOString 永远输出 UTC**，
+// ★ 修：原来这里是 `new Date(d).toISOString()` —— 而 **toISOString 永远输出 UTC**，
 //   于是本地 10-08 04:36 被显示成 10-07 20:36，**整整差 8 小时**。
 //   ★ 症状为什么难缠：`hoursSince()` 用的是 Date 差值，所以「距今 34.7 小时」是对的 ——
 //     **只有绝对时刻错**。于是一个人看着「34.7 小时前」觉得没毛病，
@@ -82,7 +82,7 @@ function decodeZstd(file) {
     if (!t) continue;
     try { events.push(JSON.parse(t)) } catch { /* 半行 */ }
   }
-  // ★★★ 2026-10-08 手滑回归：这里原本写成 `{ events, frames, failed }` ——
+  // ★★★ 手滑回归：这里原本写成 `{ events, frames, failed }` ——
   //   把**帧数组本身**（几百个大 Buffer）当成"帧数"返回了出去。
   //   后果不是报错，而是 deep 模式的 JSON 被撑到 **2.8 亿字符**，
   //   `JSON.stringify` 抛 `RangeError: Invalid string length`，
@@ -242,7 +242,7 @@ function checkCompaction(logs, deep) {
  * ★ 深度项：换气（思考预算）—— 稳态的时间维。
  * 为什么需要它：换气的判定参数（相似度 0.8 / 连续 3 次 / 上限 4 次 / 推理门槛 2048 字符）
  * 一次调好之后**没有任何反馈回路** —— 断过几次、有没有误伤，此前无人知道。
- * ★ 2026-10-14 实测确认：换气**不写事件**（没有 huanqi/* 之类），
+ * ★ 实测确认：换气**不写事件**（没有 huanqi/* 之类），
  *   所以这里不测"药效"，测**病症**：一个回合烧光预算、正文一个字没出来。
  *   形状 = assistant/message 的 content 里只有 reasoning，没有 text / tool-call。
  * ★ 双插件对账：换气只收「推理 >= minReasoningChars（默认 2048）」的，

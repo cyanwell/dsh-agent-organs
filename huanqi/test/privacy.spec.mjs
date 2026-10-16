@@ -3,7 +3,7 @@
  *
  * The other fixture suites are built from real session captures, and a model
  * narrating its own work writes absolute paths into its reasoning. Three fixtures
- * shipped that way — one carried `C:\Users\<user>` four times, plus npx cache
+ * shipped that way — one carried `C:\\Users\\<user>` four times, plus npx cache
  * hashes and a live session UUID — because the fixtures were checked for "is this
  * a loop?" and never for "what else is in here?".
  *
@@ -160,7 +160,7 @@ test('the rules catch every separator and escaping form a capture can hold', () 
   // because a capture may be plain text, JSON-escaped once, or escaped twice.
   const mustCatch = [
     ['one backslash', 'C:\\Users\\<user>\\AppData'],
-    ['two backslashes', 'C:\\\\Users\\\\<user>\\\\AppData'],
+    ['two backslashes', 'C:\\Users\\<user>\\\\AppData'],
     ['four backslashes', 'C:\\\\\\\\Users\\\\\\\\<user>\\\\\\\\AppData'],
     ['forward slashes', 'C:/Users/<user>/AppData'],
     ['mixed separators', 'C:\\/Users\\/<user>/AppData'],
