@@ -69,7 +69,7 @@ function render() {
   }
   const lines = ['[MNEMON 探针 v0.1] ' + parts.join('　｜　')]
   lines.push(hot
-    ? '  ★ 接近/到达上限 —— 想加新条目前先精简（优先砍"孤立、且能指向别的文件"的描述）。跑 `python <你的工作区>\\memory\\tools\\mem-doctor.py` 看全貌。'
+    ? '  ★ 接近/到达上限 —— 想加新条目前先精简（优先砍"孤立、且能指向别的文件"的描述）。跑 `python <你的记忆工具目录>/mem-doctor.py` 看全貌。'
     : '  磁盘没问题。')
   lines.push('  注：「实际注入几条」探针拿不到 —— 热记忆不走 system prompt。自己数：比对本轮 entries="N" 与正文实际条数。')
   return lines.join('\n')
