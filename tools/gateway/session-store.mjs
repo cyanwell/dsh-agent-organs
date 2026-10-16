@@ -18,7 +18,7 @@ import { join } from "node:path";
 import { zstdDecompressSync } from "node:zlib";
 
 /** 会话日志根目录（原先各脚本各自写死这一行，现在只此一处）。 */
-export const SESSIONS = process.env.SESSIONS_DIR || path.join(SOUL, "..", "sessions");
+export const SESSIONS = process.env.SESSIONS_DIR || join(SOUL, "..", "sessions");
 
 /** 会话日志文件名：**不锁定版本号**。 */
 const SESSION_RE = /^session\..+\.jsonl\.zstd$/;
