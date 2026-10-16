@@ -176,7 +176,7 @@ async function nodeProbe() {
   try {
     const h = await nodeHttp('/api/link/hello', {
       method: 'POST',
-      body: { client: 'pc', host: 'agent-desktop', version: '1.0' },
+      body: { client: 'pc', host: '<机器名>-desktop', version: '1.0' },
     })
     nodeState.pings++
     nodeState.lastPingAt = Date.now()

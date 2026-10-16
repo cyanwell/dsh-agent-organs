@@ -806,7 +806,7 @@ window.__ModuleLoader__.load({
     }
 
     function apply(ctx) {
-      // 那排标签里的一格 —— 写法照抄 dsh-agent 的 conversation.view
+      // 那排标签里的一格 —— 写法照抄另一个插件的 conversation.view
       ctx.slots.inject("conversation.view", function () {
         ctx.slots.register(
           { name: "conversation.view", id: "yantai", order: 6, label: "砚台" },
