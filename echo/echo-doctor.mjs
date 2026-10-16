@@ -35,7 +35,7 @@ const IDX = path.join(HUB, "index");
 const MO = path.join(SOUL, "ledger.jsonl");
 const SELF_MD = path.join(HUB, "SELF.md");
 const HEARTBEAT_DIR = path.join(HUB, "heartbeat");
-const RUNTIME = "<user>/.mnemon/runtime";
+const RUNTIME = process.env.ECHO_RUNTIME || path.join(HUB, "runtime");
 
 const MARK = "⛬ 压缩索引（非原文）";
 const MAGIC = Buffer.from([0x28, 0xb5, 0x2f, 0xfd]);
