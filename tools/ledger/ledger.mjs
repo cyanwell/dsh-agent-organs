@@ -56,8 +56,9 @@
 //   器官**不许写 promise** —— 身份可以复制，责任不能。
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const MO = process.env.LEDGER || path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/, '')), 'ledger.jsonl')
+const MO = process.env.LEDGER || path.join(path.dirname(fileURLToPath(import.meta.url)), 'ledger.jsonl')
 // ★ `lead`（主导权）是  加的第 7 类 —— 它不记"发生了什么"，它记"**现在哪个容器持主导权**"。
 //   为什么需要它：设计者要问「我怎么在新会话里确认你是那个负责决策的主体？」——
 //   旧答案是"看令牌文件"，但那正是要被废掉的东西。新答案：**看「账本」里最后一条 lead 的署名**。
