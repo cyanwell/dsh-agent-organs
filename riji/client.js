@@ -1,7 +1,7 @@
 // dsh-agent-riji —— 浏览器半（日记）
 //
 // 它就是顶部那排按钮里的一格，
-// 注册在 keyed 槽位 conversation.view 上。写法照抄 dsh-yantai/client.js：
+// 注册在 keyed 槽位 conversation.view 上。写法照抄 dsh-agent-yantai/client.js：
 //   ctx.slots.inject("conversation.view", () => ctx.slots.register(
 //     { name: "conversation.view", id, order, label }, View))
 //
