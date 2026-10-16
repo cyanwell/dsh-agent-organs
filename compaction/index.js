@@ -8,7 +8,7 @@
  *   ① ACP（billion-context-dsh）—— 模型驱动，摘要**我自己写**，因此天然带指针；
  *   ② compaction-basic（DSH 内置）—— **自动兜底**，在我没响应 nudge 时出手。
  *
- * 2026-09-27 实测确认：这份兜底压出来的 checkpoint 无法回溯。原因在它那段硬编码
+ * 确认：这份兜底压出来的 checkpoint 无法回溯。原因在它那段硬编码
  * 指令（`@deepseek-ai/dsh-compaction-basic` lib/index.js:220-255）——
  * 它要求保留 exact file paths / commands / error strings / numeric values /
  * function signatures，**但通篇没有一句要求标注「这话从哪来」**。
@@ -45,7 +45,7 @@
  *  - `dsh-agent/lib/types/runtime-types.d.ts:143`  `readonly session: Session`
  *                                ⇒ `agent.session.id` 就是门牌上的会话号
  *
- * ★★ 2026-09-27 补：手动 `/compact` 那条路也修好了
+ * ★★ 补：手动 `/compact` 那条路也修好了
  * ----------------------------------------------------
  * 上面第 1 步只覆盖了 `compactRegion`，而 `lib/index.js:930` 的 `compactRegion` 只被
  * **自动路径**调用（`compactIfNeeded` 的 `:893` 与 `:915`）。
@@ -95,7 +95,15 @@ import { toolPairingBalancedBefore } from '@deepseek-ai/dsh-compaction'
 const MARK = '> ⛬ 压缩索引（非原文）'
 
 /** memq 的门。路径写死成绝对路径 —— 它和 SELF.md 里印的是同一扇门。 */
-const MEMQ = 'node <你的工作区>\\memory\\hub\\memq.mjs'
+/**
+ * ★ 取回命令 —— 换成你自己的检索工具。
+ *
+ * 门牌会被渲染成：`<MEMQ> open log:<会话号>#seq=<n>`
+ * 所以它只要认 `open <指针>` 这个形式就行。
+ *
+ * 包只负责【写指针】，不规定你用什么工具去【回取】。
+ */
+const MEMQ = '<你的检索命令>'
 
 /** 把 seq 范围渲染成一小段指针。取不到会话号时退化成没有门牌的一句。 */
 function pointerText(sid, start, end) {
@@ -227,7 +235,7 @@ export default class YanqingCompaction extends BasicCompactionEngine {
    * 本次被压缩的 seq 范围。只在 compactRegion 的调用栈里有效，
    * 出栈即清空 —— 免得下一次 summarize 用错门牌。
    *
-   * ★★★ 2026-09-27 20:55 血案：这里原来写的是 `#range`（真私有字段），**绝不能那样写**。
+   * ★★★ 踩过的坑：这里原来写的是 `#range`（真私有字段），**绝不能那样写**。
    * preset 里这一行带着 `isolate: { compaction: true }`，cordis 的 realm 会把插件实例包成
    * **Proxy** 再交出去（`this` 是 Proxy，不是那个类的实例），而**私有字段的 brand check
    * 对 Proxy 一律失败** —— 一读就抛：
@@ -283,7 +291,7 @@ export default class YanqingCompaction extends BasicCompactionEngine {
       //     （:953），不经过我覆盖的 compactRegion ⇒ __yqRange 是 null
       //     ★ 于是现场**复原**一次（recoverManualRange），并用往返校验确认；
       //     复原不出来就退回降级式 —— **绝不猜 seq**，错的门牌比没有更坏。
-      //   ★ 2026-09-27 21:19 已实测：手动路径端到端验通 —— 门牌插进 `compaction/summary`
+      //   ★ 已验证：手动路径端到端验通 —— 门牌插进 `compaction/summary`
       //     的第一个 block，且那段门牌能用 `memq open` 打开一手原文（会话 session-3c7f289d，
       //     范围 {start:10, end:15}）。自动兜底那条路仍未验。
       const range = this.__yqRange === null ? recoverManualRange(agent, input) : this.__yqRange
