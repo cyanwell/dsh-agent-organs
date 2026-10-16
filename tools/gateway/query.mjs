@@ -183,7 +183,7 @@ if (cmd === "open") {
   // ★ 选项必须先解析掉，否则 `--span 1` 里的 `1` 会被拼进指针里
   const SPAN = Number(opt("--span", 3));
   const raw = argv.filter((a) => !a.startsWith("--")).join(" ").trim();
-  // ★ 指针被复制粘贴时总会带上尾随备注（`… #seq=5762   --D-AI-yanqing-soul--`），
+  // ★ 指针被复制粘贴时总会带上尾随备注（`… #seq=5762   --<工作区>--`），
   //   所以这里一律**只取指针本身**，不吃后面的东西。file: 例外 —— 路径里可能有空格。
   const ptr = raw;
   if (!ptr) {
