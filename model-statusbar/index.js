@@ -6,14 +6,13 @@
 // ── 为什么由宿主半来起进程，而不是从 pwsh 工具起 ──────────────────
 // 宿主半跑在 DSH 进程里，而 DSH 是从桌面图标起的独立进程 —— 它 spawn 的子进程不在
 // agent 的「作业运行器」里，所以能活过回合。实测依据：dsh-comfyui-panel 的
-// startComfy() 就是这么干的，拉起后能一直活着（<你的工作区>\dsh-tools\dsh-comfyui-panel\index.js:122）。
-// 从 pwsh 工具起会死：run_in_background 的受管作业随回合结束被杀，Start-Process 的子进程
+// startComfy() 就是这么干的，拉起后能一直活着（<comfyui 面板目录> 从 pwsh 工具起会死：run_in_background 的受管作业随回合结束被杀，Start-Process 的子进程
 // 也随命令结束被杀，而且整条命令还会报 `Windows Job runner exited with exit code 4294967295`。
 //
 // 我在这基础上多两步：
 //   1. detached:true + unref() —— ComfyUI 连 DSH 重启都不跟着死。
 //      （静息/在跑是【用户的】决定，不该被一次 DSH 重启悄悄改掉）
-//   2. stdout/stderr 落盘到 <你的工作区>\comfyui\logs\ —— 起不来时能看原因，不是抓瞎。
+//   2. stdout/stderr 落盘到 <ComfyUI 日志目录>\ —— 起不来时能看原因，不是抓瞎。
 //      ★ 但仍然不 pipe：不读的管道写满之后会把子进程卡死（comfyui-panel 踩过，注释原话）。
 //
 // ── 探测不在这里重写 ──────────────────────────────────────────
@@ -32,21 +31,21 @@ export const inject = ['tools', 'webServer']
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const PROBE_PS1 = join(HERE, 'probe.ps1')
-const PROBE_FALLBACK = '<你的工作区>\\dsh-tools\\本地模型状态栏\\probe.ps1'
+const PROBE_FALLBACK = '<插件目录>'
 
 // ★★ 默认指向 0.38（并列安装那份）。
 //   理由：0.38 能跑全部旧线（z-image / WAN i2v / WAN flf2v / IPAdapter / ControlNet 的节点
 //   都实测过在），而 0.36 跑不了 Qwen-Image 2.1（它的 VAE 会被当成 WanVAE 套、size mismatch）。
 //   ⇒ 留 0.36 的价值只在「万一 0.38 出了没测出来的毛病能一键退回去」—— 它是退路，不是入口。
-//   ★ 退回去的办法：把这一行改回 '<你的工作区>\\comfyui\\ComfyUI'，然后重启 DSH。
+//   ★ 退回去的办法：把这一行改回 '<ComfyUI 目录>'，然后重启 DSH。
 //   ★ 为什么换目录不丢东西：两个目录用 junction 共享 models / custom_nodes / output /
 //     input / user / temp，所以模型、插件、产物都还在原处，只是「跑哪份代码」变了。
-const COMFY_DIR = '<你的工作区>\\comfyui\\ComfyUI-038'
-const COMFY_PY = '<你的工作区>\\comfyui\\.venv\\Scripts\\python.exe'
+const COMFY_DIR = '<ComfyUI 目录>'
+const COMFY_PY = '<ComfyUI 的 python>'
 const COMFY_PORT = 8188
 const BASE = `http://127.0.0.1:${COMFY_PORT}`
-const LOG_DIR = '<你的工作区>\\comfyui\\logs'
-const STATE_FILE = '<你的工作区>\\comfyui\\statusbar-state.json'
+const LOG_DIR = '<ComfyUI 日志目录>'
+const STATE_FILE = './statusbar-state.json'
 const ROUTE = '/model-statusbar'
 
 // ── 空闲自动静息（0-11 加，判据与理由见下面 idleAutoTick）──────

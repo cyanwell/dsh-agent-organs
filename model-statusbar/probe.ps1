@@ -16,7 +16,7 @@ $out.comfyui = [ordered]@{
   endpoint = 'http://127.0.0.1:8188'
 }
 
-$ck = "<你的工作区>\comfyui\ComfyUI\models\checkpoints"
+$ck = "<ComfyUI 目录>\models\checkpoints"
 $out.checkpoints = @()
 if (Test-Path $ck) {
   $out.checkpoints = @(Get-ChildItem $ck -File | Where-Object { $_.Length -gt 0 } |
@@ -31,7 +31,7 @@ if (Test-Path $ck) {
 # ★ Patterns are deliberately exact: text_encoders also holds
 #   Qwen3VL-8B-Instruct-Q4_K_M.gguf, which must NOT be counted (a GGUF text
 #   encoder is known-bad for this pipeline).
-$mdl = "<你的工作区>\comfyui\ComfyUI\models"
+$mdl = "<ComfyUI 目录>\models"
 $bundleDefs = @(
   [ordered]@{
     name  = 'Qwen-Image 2.1 Turbo'
