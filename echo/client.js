@@ -220,7 +220,7 @@ window.__ModuleLoader__.load({
         react.createElement(
           "div",
           { style: { marginTop: 10, paddingTop: 8, borderTop: "1px solid #21262d", fontSize: 11, color: "#484f58", lineHeight: "17px" } },
-          "体检逻辑：<你的工作区>\\memory\\hub\\echo-doctor.mjs（命令行 node echo-doctor.mjs 跑的是同一份）",
+          "体检逻辑：<你的体检脚本>（命令行 node echo-doctor.mjs 跑的是同一份）",
           react.createElement("br"),
           "快检不看日志（约 0.9 秒）· 深检真去取一次门牌（约 9 秒）· 面板每 2 秒读一次缓存"
         )
