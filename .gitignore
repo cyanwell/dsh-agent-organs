@@ -1,0 +1,11 @@
+# 依赖（零件只带源码，不带 node_modules）
+node_modules/
+# 本机调试产物
+*.log
+*.bak
+*.bak-*
+_probe*.mjs
+selftest.mjs
+# 系统
+.DS_Store
+Thumbs.db
