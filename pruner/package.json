@@ -11,5 +11,7 @@
   },
   "peerDependencies": {
     "@deepseek-ai/dsh-compaction-tool-result-pruner": "*"
-  }
+  },
+  "author": "dsh-agent-organs contributors",
+  "license": "MIT"
 }
