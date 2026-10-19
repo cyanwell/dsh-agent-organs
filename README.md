@@ -96,6 +96,37 @@ dsh plugin --profile <name> add github:<owner>/dsh-agent-organs
 
 ---
 
+## 更新记录
+
+★ 完整技术细节记在 `dsh-agent-soul` 的更新记录里。这里只记**零件本身的变动**。
+
+### 2026-10-19 · huanqi 吸收空回合判据；panel 跟随；echo 旧口径更新
+
+**huanqi/** —— 判据从三条变四条，新增「空回合」（挂 `session/event` 的 `turn/end`，
+检测「整个回合结束了、一个字节都没吐」），命中后走换气自己的额度账本。
+和流内那三条**共用同一本账**：扣同一分、用同一个上限、触发同一个熔断。
+新增配置 `emptyTurnContinue`（默认 `true`）。
+
+顺带补回发布清单里缺的三个东西：`README_EN.md`、`tools/analyze-session.mjs`、`tsconfig.json`。
+
+★ 修了一个会**静默失效**的 bug：判断写成 `config.emptyTurnContinue && ...`，而 zod 的默认值
+只在经过 schema 解析时才生效 —— 绕过解析的路径拿到 `undefined`，整条监听不注册。
+改成 `!== false`。**测试 196/196**（新增 11 例）。
+
+**huanqi-panel/** —— `LEDGER` 从 `state/dsh-huanqi.json` 改成 `state/dsh-agent-huanqi.json`。
+原来硬编码的是开发源包名，两个包同时装时面板读的是一本没人写的账 ——
+会永远显示「换气还没出过手」。这个 bug 不报错，只是静默地显示错的东西。
+
+**echo/** —— 去掉「两者是接力」的旧说法。空回合并进来之后，`dsh-stalled-turn-continue` 是多余的。
+
+### 2026-10-16 · 零件仓库成形
+
+把 13 个 `dsh-agent-*` 插件的源码从各个开发目录收拢到这里，各占一个目录。
+`plugins/` 在 `dsh-agent-soul` 那边保持权威，这边的目录是它的镜像。
+
+★ 当时定下的纪律：**改零件时先改这里，再同步到 soul 的 `plugins/`** ——
+反过来会让分发副本变成事实上的源码，下次同步就分不清谁对。
+
 ## License
 
 MIT
