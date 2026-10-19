@@ -94,7 +94,7 @@ dsh plugin --profile <name> add <path-to-this-package>
 
 ```bash
 ECHO_* 不适用 —— 这个包用下面两个环境变量：
-PANEL_LEDGER  额度账本 JSON 的路径（默认 ./state/dsh-huanqi.json）
+PANEL_LEDGER  额度账本 JSON 的路径（默认 ./state/dsh-agent-huanqi.json）
 PANEL_PROFILES 要操作的 profile 目录（默认 <DSH_HOME>/profiles）
 ```
 

@@ -27,7 +27,7 @@ export const inject = ['webServer']
 const HOME = '<你的 DSH_HOME>/dsh/home'
 const PROFILES = ['desktop', 'web']
 /** 换气的账本（ledgerPath 留空时走这里）。它在换气出手时被重写，是"实时额度"的唯一来源。 */
-const LEDGER = `${HOME}/state/dsh-huanqi.json`
+const LEDGER = `${HOME}/state/dsh-agent-huanqi.json`
 
 /** 面板里暴露的参数：类型 + 取值范围 + 中文说明。范围抄自 dsh-huanqi 的 Config（zod schema）。 */
 const FIELDS = [
