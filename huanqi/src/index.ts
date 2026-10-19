@@ -1159,7 +1159,7 @@ export class CreditLedger {
     const home = process.env.DSH_HOME
     return home !== undefined && home !== ''
       ? join(home, 'state', 'dsh-agent-huanqi.json')
-      : join('.', 'dsh-huanqi.json')
+      : join('.', 'dsh-agent-huanqi.json')
   }
 }
 
@@ -1928,6 +1928,87 @@ function whatFor(lang: 'zh' | 'en', rule: BreakRule): string {
  * agent is collected; detectors are scoped to one agent lifecycle.
  */
 export function apply(ctx: Context, config: ResolvedConfig): void {
+  /**
+   * ★★ 启动探针（2026-10-19 加）：只要进了 apply() 就往 <DSH_HOME>/state/huanqi-boot.log 追加一行。
+   *
+   * 为什么需要它：换气哑了三次，每次查都是「文件在、bundles 里有、配置也对」，
+   * 但分不清两种完全不同的情况 ——
+   *   ① 插件压根没被加载（boot 文件不会出现）
+   *   ② 加载了、但判据一次没触发（boot 有，但 turn/end 的日志没有）
+   * 没有这个区别，就只能靠猜着改。
+   *
+   * ★ 不依赖任何判据、不依赖 session/event、不发消息 —— 纯粹的「我到了」记号。
+   * ★ 任何失败都吞掉：探针不许变成插件的故障点。
+   */
+  /** 状态目录：启动探针与检测层共用同一个落点。 */
+  const stateDir = ((): string => {
+    const home = process.env.DSH_HOME
+    return home !== undefined && home !== '' ? join(home, 'state') : '.'
+  })()
+
+  /**
+   * 往 huanqi-boot.log 追加一行。
+   *
+   * ★ 用 read + write 而不是 appendFileSync —— 这个项目自带的 @types/node 太旧，
+   *   没有 appendFileSync 的类型声明（TS2305 实测过）。
+   * ★ 任何失败都吞掉：探针不许变成插件的故障点。
+   */
+  const bootLog = (text: string): void => {
+    try {
+      mkdirSync(stateDir, { recursive: true })
+      const p = join(stateDir, 'huanqi-boot.log')
+      let prev = ''
+      try {
+        prev = readFileSync(p, 'utf8')
+      } catch {
+        prev = ''
+      }
+      writeFileSync(p, prev + '[' + new Date().toISOString() + '] ' + text + '\n', 'utf8')
+    } catch {
+      // 探针失败不许影响主流程
+    }
+  }
+  bootLog('apply() entered; config=' + JSON.stringify(config))
+
+  /**
+   * ★★ 换气检测层（2026-10-19 加，爀曦定）：每一轮结束写一条 JSONL 到
+   * `<DSH_HOME>/state/huanqi-turns.jsonl`，给回声哨兵面板读。
+   *
+   * ## 为什么需要它
+   *
+   * 判据④（空回合）的判断原本只写进 `ctx.logger.warn` —— 而 DSH 桌面端的 logger
+   * **不落盘**（state / storages / logs 三处都查过，没有 `[huanqi]` 的影子），
+   * 于是「换气到底有没有在看着这一轮」这件事，在机器上没有任何痕迹。
+   *
+   * 这一行的作用是把「不可视」变成「可视」：面板能直接列出最近每一轮的
+   * kind / 最后一条消息形状 / 有没有产出 / 判词 / 剩余额度。
+   *
+   * ## 为什么是 JSONL 而不是 JSON 数组
+   *
+   * 只追加、每行独立、坏一行不影响前面 —— 和《墨》同一个理由。
+   * 同时限制保留最近 2000 行，避免无限长。
+   * ★ 任何失败都吞掉：检测层不许影响主流程。
+   */
+  const turnsFile = join(stateDir, 'huanqi-turns.jsonl')
+  const recordTurn = (rec: Record<string, unknown>): void => {
+    try {
+      mkdirSync(stateDir, { recursive: true })
+      let prev = ''
+      try {
+        prev = readFileSync(turnsFile, 'utf8')
+      } catch {
+        prev = ''
+      }
+      const MAX_LINES = 2000
+      const lines = prev === '' ? [] : prev.split('\n').filter((l) => l.trim() !== '')
+      lines.push(JSON.stringify(rec))
+      const kept = lines.length > MAX_LINES ? lines.slice(lines.length - MAX_LINES) : lines
+      writeFileSync(turnsFile, kept.join('\n') + '\n', 'utf8')
+    } catch {
+      // 检测层不许影响主流程
+    }
+  }
+
   const detectors = new WeakMap<object, LoopDetector>()
   /**
    * 换气账本。
@@ -2185,6 +2266,10 @@ export function apply(ctx: Context, config: ResolvedConfig): void {
      *   不是 OR 累积。turn/end 时看最后留下的那个值。
      */
     const lastMessageHadOutput = new Map<string, boolean>()
+    /** sessionId → 最后一条 assistant 消息的形状（如 "text" / "reasoning" / "reasoning+tool-call"） */
+    const lastMessageShape = new Map<string, string>()
+    /** sessionId → 本轮 turn/start 的时间戳（毫秒），用来算「卡了多久」 */
+    const turnStartedAt = new Map<string, number>()
 
     ctx.on('session/event', ((session: { id?: string } | undefined, event: { type?: string; data?: unknown } | undefined): void => {
       const sid = session === undefined || session === null ? undefined : session.id
@@ -2192,6 +2277,8 @@ export function apply(ctx: Context, config: ResolvedConfig): void {
       const type = event === undefined ? undefined : event.type
       if (type === 'turn/start') {
         lastMessageHadOutput.set(sid, false)
+        // ★ 诊断：记下本轮开始时间（用来算「卡了多久」）
+        turnStartedAt.set(sid, Date.now())
         return
       }
       if (type === 'assistant/message') {
@@ -2206,33 +2293,74 @@ export function apply(ctx: Context, config: ResolvedConfig): void {
           })
           // ★ 覆盖，不是 OR —— 见上面那段注释
           lastMessageHadOutput.set(sid, has)
+          // ★ 诊断：记下最后一条消息里到底有什么（给排查用）
+          lastMessageShape.set(
+            sid,
+            content
+              .map((p: unknown) => (p !== null && typeof p === 'object' ? String((p as { type?: unknown }).type) : '?'))
+              .join('+') || '(空)',
+          )
         }
         return
       }
       if (type !== 'turn/end') return
 
-      // 只认「正常结束」这两种；error / interrupted / max-tokens 归 auto-continue 管。
       const data = event === undefined ? undefined : (event.data as { reason?: { kind?: unknown } } | undefined)
       const kind = data === undefined ? undefined : data.reason?.kind
-      if (kind !== 'completed' && kind !== 'no-visible-output') return
+
+      // ★★ 诊断（2026-10-19 第二次加，改成 warn 级必定可见）：
+      // 上一版的 debug 日志看不到，所以「停在思考里」那次查不出到底是哪种情况。
+      // 这一行在任何 kind 下都会打，能区分三种可能：
+      //   ① 压根没这行 → turn 没结束，卡在中间了（判据 ④ 管不到，得靠判据 ①）
+      //   ② 有这行但 kind 不是 completed → 判断被我筛掉了
+      //   ③ 有这行、kind=completed、最后一条=reasoning → 应该续却没续（代码 bug）
+      const lastHad = lastMessageHadOutput.get(sid) === true
+      const shape = lastMessageShape.get(sid) ?? '(还没有 assistant 消息)'
+      const startedAt = turnStartedAt.get(sid)
+      const elapsed = startedAt === undefined ? -1 : Math.round((Date.now() - startedAt) / 1000)
+
+      // ★★ 先算判词，再落盘 —— 面板看到的必须是「当时真实的决定」，不是事后推测。
+      // 三种判词对应三种完全不同的病因，混在一起就失去了信息量：
+      //   skip:kind=…     → 根本没走到判据④（回合以别的方式结束）
+      //   skip:had-output → 走到了，但最后一轮其实有正文，不该续
+      //   continue:…      → 该续且续了（额度够）
+      //   circuit-break   → 该续但额度耗尽，熔断
+      const kindStr = kind === undefined ? '(none)' : String(kind)
+      const kindAccepted = kind === 'completed' || kind === 'no-visible-output'
+      let verdict: string
+      if (!kindAccepted) verdict = 'skip:kind=' + kindStr
+      else if (lastHad) verdict = 'skip:had-output'
+      else if (ledger.canContinue()) verdict = 'continue:credit=' + String(ledger.credit)
+      else verdict = 'circuit-break:credit=0'
+
+      ctx.logger.warn(
+        '[huanqi] turn/end kind=' + kindStr +
+          ' 最后一条=[' + shape + ']' +
+          ' 有产出=' + lastHad +
+          ' 本轮时长=' + elapsed + 's' +
+          ' → ' + verdict,
+      )
+
+      recordTurn({
+        t: new Date().toISOString(),
+        sid,
+        kind: kindStr,
+        shape,
+        hadOutput: lastHad,
+        elapsedSec: elapsed,
+        credit: ledger.credit,
+        creditMax: ledger.creditMax,
+        verdict,
+      })
+
+      // 只认「正常结束」这两种；error / interrupted / max-tokens 归 auto-continue 管。
+      if (!kindAccepted) return
 
       // ★ 看的是**最后一条**消息有没有产出，不是「这一轮任何一次」。
-      // 前面调过工具、最后一步卡在思考里 —— 这恰恰是最常见的形状，必须接住。
-      const lastHad = lastMessageHadOutput.get(sid) === true
-      // ★★ 诊断日志（2026-10-19 加）：出手和不出手都要留痕。
-      // 起因是那次「最后一步卡住」发生时查不到任何东西 —— 判据没动，也没说为什么。
-      try {
-        ctx.logger?.debug?.(
-          '[huanqi] turn/end kind=%s 最后一条有产出=%s → %s',
-          kind,
-          lastHad,
-          lastHad ? '不续' : '准备续',
-        )
-      } catch {
-        // 日志失败不许影响主流程
-      }
       if (lastHad) return
       lastMessageHadOutput.delete(sid)
+      lastMessageShape.delete(sid)
+      turnStartedAt.delete(sid)
 
       const agent = ctx.agents.get(sid as never) as GuardableAgent | undefined
       if (agent === undefined) return
@@ -2492,4 +2620,8 @@ export function apply(ctx: Context, config: ResolvedConfig): void {
       }
     })()
   })
+
+  // ★ 启动探针的「走到底」记号：只有 entered 没有 done = apply 中途抛错了。
+  // 和 entered 配对，才能区分「加载了但注册失败」和「压根没加载」。
+  bootLog('apply() done')
 }
