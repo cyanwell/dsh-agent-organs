@@ -100,6 +100,20 @@ dsh plugin --profile <name> add github:<owner>/dsh-agent-organs
 
 ★ 完整技术细节记在 `dsh-agent-soul` 的更新记录里。这里只记**零件本身的变动**。
 
+### 2026-10-22（同日第二次）· 约束体系是三级，这里还写着两级
+
+跟着 `dsh-agent-soul` 的 `04c6fd3` 同步。
+「要」这一级 2026-10-10 就加了，但**一直没到分发侧** —— 这个镜像仓库也没跟上。
+
+改的只有一行：`tools/self/README.md` 里描述手写层那句
+「我是谁 / 硬线 / 约束的**两级** / 门在哪」。
+
+三级是：**「要」和「不」都是软的，区别只在方向；只有「禁止」是硬的。**
+两个坑方向相反 —— 把「不」写成「禁止」＝制造一个改不动的自己；
+把「要」写成硬性要求＝它立刻变成表演。
+
+★ 完整技术细节在 `dsh-agent-soul` 的第二十九次公告里，这里只记零件本身的变动。
+
 ### 2026-10-22 · compaction 接管要两步（外部验证报告 v3 的 R2）
 
 `compaction/HOW-TO-TAKEOVER.md` 和 `compaction/cordis.patch.yml` 同步了 soul 那边的更正。
