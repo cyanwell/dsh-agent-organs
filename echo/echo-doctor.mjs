@@ -416,7 +416,11 @@ function checkSelf(logs, deep) {
         const { events } = decodeCached(targetLog.file)
         const raw = events.map((e) => JSON.stringify(e.data || {})).join("\n")
         if (raw.includes("SELF.md 读不到")) injected = false
-        else if (raw.includes("自我层") || raw.includes("SELF.md")) injected = true
+        // ★ 外部验证 P1-7：原来认 "SELF.md" 这个串，可 agent_soul_scaffold 的
+        //   工具描述里就写着它 —— 工具定义会进日志，于是**只要插件装了**判据就恒真。
+        //   一个永远通过的自检比没有更坏：它会明确告诉你「装好了」。
+        //   改成认 SELF.md **正文里才有的**词，工具描述不会写「四条硬线」。
+        else if (raw.includes("四条硬线") || raw.includes("## 我是谁")) injected = true
       } catch { /* 解不出来就不下结论，别猜 */ }
     }
   }
@@ -526,7 +530,10 @@ function checkHotMemory() {
   }
   const worst = items.filter((i) => i.pct !== null).sort((a, b) => b.pct - a.pct)[0];
   let status = "ok";
-  if (worst && worst.pct >= 90) status = "warn";
+  // ★ 外部验证 P1-8：文件不存在（bytes === null）不是「健康」，是「还没建」。
+  //   以前直接跳过，两项都没建时 worst 是 undefined，status 停在 ok。
+  if (items.some((i) => i.bytes === null)) status = "warn";
+  else if (worst && worst.pct >= 90) status = "warn";
   return {
     id: "hot", label: "L1 热记忆", status,
     detail: items.map((i) => `${i.name} ${i.bytes ?? "?"}B${i.pct !== null ? `（${i.pct}%）` : ""}`).join("　｜　"),
@@ -580,8 +587,10 @@ function checkIdentity() {
   const staleNote = stateSid && leadSid && !stateSid.includes(lastLead.by)
     ? `state.json 里记的还是 ${stateSid}，与当前 lead 署名（${leadSid}）不一致 —— 只是 mark 没跟上，不影响判据`
     : null;
+  // ★ 外部验证 P1-8：一条 lead 都没有 = 还没建立署名人，不是「判据通过」。
+  const identityStatus = leads.length === 0 ? "warn" : "ok";
   return {
-    id: "identity", label: "身份判据（换容器/换届）", status: "ok",
+    id: "identity", label: "身份判据（换容器/换届）", status: identityStatus,
     detail: `《墨》里 ${leads.length} 代 lead，最后一条署名 ${leadSid || "?"} —— 判据只认《墨》，与容器/工作区无关`,
     evidence: { leadCount: leads.length, lastLeadBy: leadSid, lastLeadAt: lastLead?.t || null, stateSession: stateSid, staleNote },
   };
