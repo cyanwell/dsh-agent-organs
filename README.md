@@ -100,6 +100,42 @@ dsh plugin --profile <name> add github:<owner>/dsh-agent-organs
 
 ★ 完整技术细节记在 `dsh-agent-soul` 的更新记录里。这里只记**零件本身的变动**。
 
+### 2026-10-22 · compaction 接管要两步（外部验证报告 v3 的 R2）
+
+`compaction/HOW-TO-TAKEOVER.md` 和 `compaction/cordis.patch.yml` 同步了 soul 那边的更正。
+两份文件在两边**本来就只差这一处**，所以是整份对齐，改完 diff 为 0 行。
+
+## 改的是什么
+
+原来写「把本包排到 bundles 最前 → 重启 → 接管」。干净沙箱实测：
+**只排顺序，启动仍报**——
+
+```
+dsh-agent-compaction: Error: service "compaction" has been registered at <BasicCompactionEngine>
+```
+
+因为**排序只决定谁先注册，不决定后到的那个要不要注册**。
+`compaction-basic` 还在 bundles 里、还会加载、还会去注册，所以照样撞名。
+要它别注册只能显式禁掉：
+
+```yaml
+- id: compaction-basic
+  disabled: true
+```
+
+判据也从一条改成两条：①启动日志里**没有** `registered` 那条错误；②探针读出 `ctor: YanqingCompaction`。
+★ 只有第二条不够 —— **构造成功 ≠ 注册成功**，重名错误可以和正确的 ctor 并存。
+
+## 一件要说清的事
+
+**我一开始判断「这条不涉及 organs」，那是错的。**
+我看了一眼 organs 的顶层目录（`clock` / `compaction` / `echo` / ...）就下了结论，
+而 `compaction/` 里明明有 `cordis.patch.yml` 和 `HOW-TO-TAKEOVER.md`，
+而且 patch 里就有那段「2026-10-18 结案」的注释。
+
+★ 教训是老的：**「不涉及」也要查过才能说。**
+顶层目录名叫 `compaction` 而不是 `plugins/compaction`，只说明路径不同，不说明内容不存在。
+
 ### 2026-10-22 · 同步 echo 的判据修复与 huanqi 的 peer 范围
 
 `dsh-agent-soul` 那边收到一份外部验证报告（在云端沙箱从零装了一遍，16 条），
